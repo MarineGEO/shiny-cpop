@@ -5,6 +5,7 @@ library(lubridate)
 library(ggplot2)
 library(readr)
 library(magrittr)
+library(dplyr)
 
 # load the data file when application starts
 #wq_data <- read_csv("data/2017_Water_Quality_RAW_SERC.csv") 
@@ -97,7 +98,7 @@ server <- function(input, output) {
   
   # Generate a plot of the data ----
   output$plot <- renderPlot({
-      cat(file=stderr(), "Ploting", input$sensor, " - ", input$selectedVariable, "\n")
+      #(file=stderr(), "Ploting", input$sensor, " - ", input$selectedVariable, "\n")
 
       sensorDataSource() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan)) %>% 
         ggplot(aes_string(x="Timestamp", y=input$selectedVariable))+
@@ -109,6 +110,7 @@ server <- function(input, output) {
   
   # Generate an HTML table view of the data ----
   output$table <- DT::renderDataTable(DT::datatable({
+    
     d <- sensorDataSource() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
     d
   }))
