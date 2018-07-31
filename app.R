@@ -4,6 +4,7 @@ library(shiny)
 library(lubridate)
 library(ggplot2)
 library(readr)
+library(magrittr)
 
 # load the data file when application starts
 #wq_data <- read_csv("data/2017_Water_Quality_RAW_SERC.csv") 
