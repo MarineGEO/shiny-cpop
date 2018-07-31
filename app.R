@@ -1,19 +1,21 @@
 # shiny app demo showing SERC water quality, level and met data from early 2017
 library(shiny)
-library(tidyverse)
+#library(tidyverse)
 library(lubridate)
+library(ggplot2)
+library(readr)
 
 # load the data file when application starts
 #wq_data <- read_csv("data/2017_Water_Quality_RAW_SERC.csv") 
-wq_data <- read_csv("data/2017_Water_Quality_RAW_SERC.csv") 
+wq_data <- read_csv(url("https://dl.dropboxusercontent.com/s/n8sagrl8iwdmktm/2017_Water_Quality_RAW_SERC.csv?dl=0")) 
 names(wq_data) <- make.names(names(wq_data))
 
 #we_data <- read_csv("data/2017_MET_RAW_SERC.csv")
-we_data <- read_csv("data/2017_MET_RAW_SERC.csv")
+we_data <- read_csv(url("https://dl.dropboxusercontent.com/s/rnkq0i0r7uxc5l5/2017_MET_RAW_SERC.csv?dl=0"))
 names(we_data) <- make.names(names(we_data))
 
 #wl_data <- read_csv("data/2017_Water_Level_RAW_SERC.csv")
-wl_data <- read_csv("data/2017_Water_Level_RAW_SERC.csv")
+wl_data <- read_csv(url("https://dl.dropboxusercontent.com/s/byukiwxjtxkw0nm/2017_Water_Level_RAW_SERC.csv?dl=0"))
 names(wl_data) <- make.names(names(wl_data))
 
 
