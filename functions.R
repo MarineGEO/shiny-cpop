@@ -35,3 +35,13 @@ loadSensorCSV <- function(fullurl){
   names(sensorData) <- make.names(names(sensorData)) # prettify the dataset column names (removes spaces + illegal characters)
   return(sensorData)
 }
+
+# pretty variable name with units
+getLabel <- function(variable){
+  # get the pretty label with units if it is defined in the labeled units named list
+  label <- tryCatch(labeled_units[[variable]], error=function(cond){return(variable)}) # return function input on error (ie no match)
+  return(label)
+}
+
+#named list 
+#setNames(names(d), lapply(names(d), getLabel))

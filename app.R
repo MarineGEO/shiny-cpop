@@ -49,7 +49,7 @@ ui <- fluidPage(
       selectInput("timeSpan", "View data from previous:",
                   c("3 hours" = 3, "6 hours" = 6, "12 hours" = 12, "1 day" = 24, "2 days" = 2*24, "3 days" = 3*24, 
                     "4 days" = 4*24, "5 days" = 5*24, "1 Week" = 7*24, "10 days" = 10*24, "2 Weeks" = 2*7*24, 
-                    "3 Weeks" = 3*7*24, "1 Month" = 31*24, "6 Weeks" = 6*7*24, "2 Months" = 31*2*24), selected = 1),
+                    "3 Weeks" = 3*7*24, "1 Month" = 31*24, "6 Weeks" = 6*7*24, "2 Months" = 31*2*24), selected = 5*24),
       
       br(),# br() element to introduce extra vertical spacing ----
      
@@ -96,7 +96,10 @@ server <- function(input, output) {
   output$variable = renderUI({
       ignore_cols <- sensorAttributeLookup(input$sensor, ignore)[[1]] # grab the column names to ignore from the sensor table
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
-      selectizeInput('selectedVariable', 'Variable', choices=colnames, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
+      
+      namedLabels <- setNames(colnames, lapply(colnames, getLabel))
+      
+      selectizeInput('selectedVariable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
     })
   
   # Generate a plot of the data ----
@@ -107,6 +110,7 @@ server <- function(input, output) {
     sensorDataTimePeriod() %>% 
       ggplot(aes_string(x="Timestamp", y=input$selectedVariable, colour=input$selectedVariable))+
       geom_point(aes_string(x="Timestamp", y=input$selectedVariable))+
+      ylab(getLabel(input$selectedVariable))+
       scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
       theme_bw() + 
       theme(panel.border = element_blank(),
@@ -129,7 +133,7 @@ server <- function(input, output) {
         select(Timestamp, input$selectedVariable) %>% 
         tidyr::gather("Variable", "Value", -Timestamp) %>% 
         filter(Variable %in% input$selectedVariable) %>% 
-        ggplot(aes(x=Timestamp, y=Value, colour=Variable))+
+        ggplot(aes(x=Timestamp, y=Value, colour=factor(Variable, labels=lapply(input$selectedVariable, getLabel))))+
         geom_point()+
         theme_bw() + 
         theme(panel.border = element_blank(),
@@ -167,6 +171,8 @@ server <- function(input, output) {
       write.csv(sensorDataTimePeriod(), file, row.names = FALSE)
     }
   )
+  
+  
 }
 
 # Create Shiny app ----
