@@ -63,8 +63,13 @@ ui <- fluidPage(
                     "3 Weeks" = 3*7*24,
                     "1 Month" = 31*24,
                     "6 Weeks" = 6*7*24,
-                    "2 Months" = 31*2*24), selected = 1)
-    ),
+                    "2 Months" = 31*2*24), selected = 1),
+      
+      # Button
+      downloadButton("downloadData", "Download")
+      
+      ),
+
     
     # Main panel for displaying outputs ----
     mainPanel(
@@ -114,6 +119,18 @@ server <- function(input, output) {
     d <- sensorDataSource() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
     d
   }))
+  
+  
+  # Downloadable csv of selected dataset ----
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste(input$sensor, ".csv", sep = "")
+    },
+    content = function(file) {
+      data2export <- sensorDataSource() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
+      write.csv(data2export, file, row.names = FALSE)
+    }
+  )
   
 }
 
