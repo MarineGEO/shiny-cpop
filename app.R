@@ -6,6 +6,8 @@ library(ggplot2)
 library(readr)
 library(magrittr)
 library(dplyr)
+library(scales)
+
 
 # Source the sensor data list and the functions
 source("dataSource.R")
@@ -112,6 +114,7 @@ server <- function(input, output) {
       geom_point(aes_string(x="Timestamp", y=input$selectedVariable))+
       ylab(getLabel(input$selectedVariable))+
       scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
+      scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
       theme_bw() + 
       theme(panel.border = element_blank(),
             panel.grid.major = element_blank(),
@@ -135,16 +138,17 @@ server <- function(input, output) {
         filter(Variable %in% input$selectedVariable) %>% 
         ggplot(aes(x=Timestamp, y=Value, colour=factor(Variable, labels=lapply(input$selectedVariable, getLabel))))+
         geom_point()+
+        scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
         theme_bw() + 
         theme(panel.border = element_blank(),
               panel.grid.major = element_blank(),
               plot.title = element_text(hjust = 0.5),
               panel.grid.minor = element_blank(),
               axis.title.x = element_blank(),
-              axis.title.y = element_text(size=20),
-              axis.text = element_text(size=18),
-              legend.position="right", # position of legend or none
-              legend.direction="vertical", # orientation of legend
+              axis.title.y = element_text(size=16),
+              axis.text = element_text(size=14),
+              legend.position="bottom", # position of legend or none
+              legend.direction="horizontal", # orientation of legend
               legend.title= element_blank(), # no title for legend
               legend.key.size = unit(0.5, "cm"), # size of legend
               legend.text = element_text(size=14),
