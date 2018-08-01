@@ -96,15 +96,59 @@ server <- function(input, output) {
   output$variable = renderUI({
       ignore_cols <- sensorAttributeLookup(input$sensor, ignore)[[1]] # grab the column names to ignore from the sensor table
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
-      selectInput('selectedVariable', 'Variable', colnames, selected=colnames[0])
+      selectizeInput('selectedVariable', 'Variable', choices=colnames, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
     })
   
   # Generate a plot of the data ----
   output$plot <- renderPlot({
+    
+    if(length(input$selectedVariable)==1){
+    
     sensorDataTimePeriod() %>% 
-        ggplot(aes_string(x="Timestamp", y=input$selectedVariable))+
+      ggplot(aes_string(x="Timestamp", y=input$selectedVariable, colour=input$selectedVariable))+
+      geom_point(aes_string(x="Timestamp", y=input$selectedVariable))+
+      scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
+      theme_bw() + 
+      theme(panel.border = element_blank(),
+            panel.grid.major = element_blank(),
+            plot.title = element_text(hjust = 0.5),
+            panel.grid.minor = element_blank(),
+            axis.title.x = element_blank(),
+            axis.title.y = element_text(size=16),
+            axis.text = element_text(size=14),
+            legend.position="none", # position of legend or none
+            legend.direction="horizontal", # orientation of legend
+            legend.title= element_blank(), # no title for legend
+            legend.key.size = unit(0.5, "cm"), # size of legend
+            axis.line.x = element_line(color="black", size = 1),
+            axis.line.y = element_line(color="black", size = 1))
+    }
+    else if (length(input$selectedVariable)>1){
+      
+      sensorDataTimePeriod() %>% 
+        select(Timestamp, input$selectedVariable) %>% 
+        tidyr::gather("Variable", "Value", -Timestamp) %>% 
+        filter(Variable %in% input$selectedVariable) %>% 
+        ggplot(aes(x=Timestamp, y=Value, colour=Variable))+
         geom_point()+
-        theme_bw()
+        theme_bw() + 
+        theme(panel.border = element_blank(),
+              panel.grid.major = element_blank(),
+              plot.title = element_text(hjust = 0.5),
+              panel.grid.minor = element_blank(),
+              axis.title.x = element_blank(),
+              axis.title.y = element_text(size=20),
+              axis.text = element_text(size=18),
+              legend.position="right", # position of legend or none
+              legend.direction="vertical", # orientation of legend
+              legend.title= element_blank(), # no title for legend
+              legend.key.size = unit(0.5, "cm"), # size of legend
+              legend.text = element_text(size=14),
+              axis.line.x = element_line(color="black", size = 1),
+              axis.line.y = element_line(color="black", size = 1))+
+        guides(colour = guide_legend(override.aes = list(size=3)))
+      
+    }
   })
   
   # Generate an HTML table view of the data ----
