@@ -8,7 +8,6 @@ library(magrittr)
 library(dplyr)
 library(scales)
 
-
 # Source the sensor data list and the functions
 source("dataSource.R")
 source("functions.R")
