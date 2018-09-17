@@ -15,7 +15,7 @@ source("functions.R")
 ui <- fluidPage(
   
   # App title ----
-  titlePanel("DEMO: SERC MarineGEO Sensors"),
+  titlePanel("DEMO: SERC MarineGEO Sensors Dashboard"),
   
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -39,7 +39,9 @@ ui <- fluidPage(
       
       br(),# br() element to introduce extra vertical spacing ----
      
-      downloadButton("downloadData", "Download")  # Button to download the data for selected time span
+      downloadButton("downloadData", "Download"),  # Button to download the data for selected time span
+      
+      htmlOutput("latestValues")
       ),
 
     # Main panel for displaying outputs ----
@@ -47,6 +49,7 @@ ui <- fluidPage(
       
       # Output: Tabset w/ plot, summary, and table ----
       tabsetPanel(type = "tabs",
+                  tabPanel("Current Reading", htmlOutput("latestTime"), tableOutput("table2")),
                   tabPanel("Plot", plotOutput("plot")),
                   tabPanel("Table", DT::dataTableOutput("table"))
       )
@@ -147,6 +150,32 @@ server <- function(input, output) {
   output$table <- DT::renderDataTable(DT::datatable({
     sensorDataTimePeriod()
   }))
+  
+  
+  # reactive function return the lastest record
+  latestRecord <- reactive({
+    d <- sensorData() %>% arrange(Timestamp) %>% tail(1)
+    return(d)
+  })
+  
+  
+  # render text with the data from the latest record collected
+  output$latestTime <- renderUI({
+    r <- latestRecord()
+    str1 <- paste("<h2>", r$Timestamp, "</h2>")
+    HTML(str1)
+  })
+  
+  # Generate an HTML table view of the data ----
+  output$table2 <- renderTable({
+    ignore_cols <- sensorAttributeLookup(input$sensor, ignore)[[1]] # grab the column names to ignore from the sensor table
+    d <- latestRecord()[!names(latestRecord()) %in% ignore_cols]
+    
+    d %>% rownames_to_column %>% 
+      tidyr::gather(var, value, -rowname) %>% 
+      tidyr::spread(rowname, value) %>% 
+      rowwise() %>% mutate(var = getLabel(var))
+  }, hover=TRUE, bordered=TRUE, colnames=FALSE)
   
   # Downloadable csv of selected dataset ----
   output$downloadData <- downloadHandler(
