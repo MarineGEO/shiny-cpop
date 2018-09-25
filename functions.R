@@ -37,11 +37,12 @@ loadSensorCSV <- function(fullurl){
 }
 
 # pretty variable name with units
-getLabel <- function(variable){
-  # get the pretty label with units if it is defined in the labeled units named list
-  label <- tryCatch(labeled_units[[variable]], error=function(cond){return(variable)}) # return function input on error (ie no match)
+getLabel <- function(variable, labeledUnits=labeled_units){
+  variable <- enquo(variable)
+  labeledDF <- bind_rows(labeledUnits) # turns named list into a dataframe
+  label <- tryCatch(labeledDF %>% select(!!variable) %>% pull(), error=function(cond){return(variable)}) # pull out the units for the selected variable
   return(label)
-}
+  }
 
 #named list 
 #setNames(names(d), lapply(names(d), getLabel))
