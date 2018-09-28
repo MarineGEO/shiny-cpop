@@ -64,7 +64,7 @@ server <- function(input, output) {
   sensorData <- reactive({
     cat(file=stderr(), "Switching to", input$sensor, "\n")
     d <- loadSensorCSV(sensorAttributeLookup(input$sensor, urlpath), sensorAttributeLookup(input$sensor, na))
-
+    
     return(d)
   })
   
@@ -87,13 +87,12 @@ server <- function(input, output) {
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
       
       namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
-      
       selectizeInput('selectedVariable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
     })
   
   # Generate a plot of the data ----
   output$plot <- renderPlot({
-    
+    Sys.sleep(1)
     if(length(input$selectedVariable)==1){
     
     sensorDataTimePeriod() %>% 
