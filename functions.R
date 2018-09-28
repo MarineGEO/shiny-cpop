@@ -18,6 +18,12 @@ sensorAttributeLookup <- function(sensorNameLookup, attribute){
   attribute <- enquo(attribute)
   s <- sensorLookup(sensorNameLookup)
   a <- s %>% pull(!!attribute)
+  
+  # unnest list by flattening it
+  if(typeof(a) == "list"){
+    a <- unlist(a)
+  }
+  
   return(a)
 }
 
@@ -30,14 +36,14 @@ sensorList <- function(){
 
 
 # loads sensor's data from a csv file 
-loadSensorCSV <- function(fullurl){
-  sensorData <- readr::read_csv(url(fullurl)) # loads a CSV file from a publicly hosted dataset (ie dropbox, github)
+loadSensorCSV <- function(fullurl, na=c("", "NA")){
+  sensorData <- readr::read_csv(url(fullurl), na=na) # loads a CSV file from a publicly hosted dataset (ie dropbox, github)
   names(sensorData) <- make.names(names(sensorData)) # prettify the dataset column names (removes spaces + illegal characters)
   return(sensorData)
 }
 
 # pretty variable name with units
-getLabel <- function(variable, labeledUnits=labeled_units){
+getLabel <- function(variable, labeledUnits){
   variable <- enquo(variable)
   labeledDF <- bind_rows(labeledUnits) # turns named list into a dataframe
   label <- tryCatch(labeledDF %>% select(!!variable) %>% pull(), error=function(cond){return(variable)}) # pull out the units for the selected variable

@@ -4,16 +4,7 @@ library(tibble)
 # Specify list of sensors to include in the shiny app.
 # Must include the site, sensor name (suggested format is site-type "SERC-WaterLevel"), public web accessible URL, columns to ignore, units(?)
 
-# R dataframe of sensors to include in the app. Must be called sensors.
-sensors <- tribble(
-    ~site, ~sensorName, ~type, ~urlpath, ~ignore,
-    "SERC", "SERC-WaterQuality", "waterquality", "https://dl.dropboxusercontent.com/s/n8sagrl8iwdmktm/2017_Water_Quality_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Bat"), 
-    "SERC", "SERC-MET", "met", "https://dl.dropboxusercontent.com/s/rnkq0i0r7uxc5l5/2017_MET_RAW_SERC.csv?dl=0", c("Timestamp", "Site"), 
-    "SERC", "SERC-WaterLevel", "waterlevel", "https://dl.dropboxusercontent.com/s/byukiwxjtxkw0nm/2017_Water_Level_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Status")
-  )
-
-
-labeled_units <- c("Temperature"="Temperature (°C)", 
+waterquality.labels <- c("Temperature"="Temperature (°C)", 
            "Specific.Conductivity"="Specific Conductivity (mS/cm)",
            "Conductivity"= "Conductivity (mS/cm)",
            "Salinity"= "Salinity (psu)",
@@ -28,7 +19,24 @@ labeled_units <- c("Temperature"="Temperature (°C)",
            "BGA.PE.2"= "BGA-PE (µg/l)",
            "FDOM"= "FDOM (RFU)",
            "FDOM.2"= "FDOM (ppb QSE)",
-           "Battery"= "Battery (Volts)"
+           "Battery"= "Battery (Volts)")
+
+met.labels <- c("Air.Temperature"="Air Temperature (°C)",
+           "Barometric.Pressure"="Barometric Pressure",
+           "Daily.Rain"="Daily Rain ()",
+           "PAR"="PAR",
+           "Rain.Rate"="Rain Rate",
+           "Relative.Humidity"="Relative Humidity",
+           "Wind.Direction"="Wind Direction",
+           "Wind.Gust"="Wind Gust",
+           "Wind.Speed"="Wind Speed"
            )
 
-
+# R dataframe of sensors to include in the app. Must be called sensors.
+sensors <- tribble(
+  ~site, ~sensorName, ~type, ~urlpath, ~ignore, ~na, ~units,
+  "SERC", "SERC-WaterQuality", "waterquality", "https://dl.dropboxusercontent.com/s/n8sagrl8iwdmktm/2017_Water_Quality_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Bat"),c("", "NA"), waterquality.labels,
+  "SERC", "SERC-MET", "met", "https://dl.dropboxusercontent.com/s/rnkq0i0r7uxc5l5/2017_MET_RAW_SERC.csv?dl=0", c("Timestamp", "Site"),c("", "NA", "-Invalid-"), met.labels,
+  "SERC", "SERC-WaterLevel", "waterlevel", "https://dl.dropboxusercontent.com/s/byukiwxjtxkw0nm/2017_Water_Level_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Status"),c("", "NA"), NA,
+  "SERC", "SERC-MET-RAW", "waterlevel", "https://raw.githubusercontent.com/MarineGEO/cpop-example-datasets/master/2017_MET_RAW_SERC.csv", c("Timestamp", "Site", "Status"),"-Invalid-", met.labels
+)

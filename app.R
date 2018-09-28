@@ -63,7 +63,7 @@ server <- function(input, output) {
   # reactive function to return dataset for a selected sensor type
   sensorData <- reactive({
     cat(file=stderr(), "Switching to", input$sensor, "\n")
-    d <- loadSensorCSV(sensorAttributeLookup(input$sensor, urlpath))
+    d <- loadSensorCSV(sensorAttributeLookup(input$sensor, urlpath), sensorAttributeLookup(input$sensor, na))
 
     return(d)
   })
@@ -86,7 +86,7 @@ server <- function(input, output) {
       ignore_cols <- sensorAttributeLookup(input$sensor, ignore)[[1]] # grab the column names to ignore from the sensor table
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
       
-      namedLabels <- setNames(colnames, lapply(colnames, getLabel))
+      namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
       
       selectizeInput('selectedVariable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
     })
@@ -99,7 +99,7 @@ server <- function(input, output) {
     sensorDataTimePeriod() %>% 
       ggplot(aes_string(x="Timestamp", y=input$selectedVariable, colour=input$selectedVariable))+
       geom_point(aes_string(x="Timestamp", y=input$selectedVariable))+
-      ylab(getLabel(input$selectedVariable))+
+      ylab(getLabel(input$selectedVariable, sensorAttributeLookup(input$sensor, units)))+
       scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
       scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
       theme_bw() + 
@@ -123,7 +123,7 @@ server <- function(input, output) {
         select(Timestamp, input$selectedVariable) %>% 
         tidyr::gather("Variable", "Value", -Timestamp) %>% 
         filter(Variable %in% input$selectedVariable) %>% 
-        ggplot(aes(x=Timestamp, y=Value, colour=factor(Variable, labels=lapply(input$selectedVariable, getLabel))))+
+        ggplot(aes(x=Timestamp, y=Value, colour=factor(Variable, labels=lapply(input$selectedVariable, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))))+
         geom_point()+
         scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
         theme_bw() + 
