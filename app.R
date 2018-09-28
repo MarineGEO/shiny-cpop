@@ -10,6 +10,7 @@ library(dplyr)
 # Source the sensor data list and the functions
 source("dataSource.R")
 source("functions.R")
+source("figures.R")
 
 # Define UI for random distribution app ----
 ui <- fluidPage(
@@ -23,7 +24,7 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
       
-      selectInput("siteSelector", "Site:", c(siteList())), # Dropdown Selector for Sensor Dataset
+      selectInput("site", "Site:", c(siteList())), # Dropdown Selector for Sensor Dataset
       
       br(),  # br() element to introduce extra vertical spacing ----
       
@@ -67,50 +68,39 @@ server <- function(input, output) {
   # UI functions to build the dropdown menus in the shiny app
   # builds UI dropdown selctor for all the data sources at selected site
   output$sensorSelectorUI = renderUI({
-    if(input$siteSelector==""){return(NULL)}     # checks that the siteSelector is defined
+    if(input$site==""){return(NULL)}     # checks that the siteSelector is defined
     
-    site_sensors <- sensors %>% filter(site==input$siteSelector) # filter to just the data sets at the selected site
+    site_sensors <- sensors %>% filter(site==input$site) # filter to just the data sets at the selected site
     sensorList <- unique(site_sensors$sensorName) # TODO see if this can be combined with the filter
-    return(selectInput("sensorSelector", "Sensor:", c(sensorList))) # Dropdown Selector for Sensor Dataset
+    return(selectInput("sensor", "Sensor:", c(sensorList))) # Dropdown Selector for Sensor Dataset
   })
 
-  # builds UI dropdown selctor for all the parameter options for a given sensor dataset by reading in column names
+  # builds ui dropdown selctor for the sensor variables from all the valid dataframe column names
   output$parameterSelectorUI = renderUI({
-    if(input$siteSelector=="" | is.null(input$sensorSelector | is.null(sensorData))){return(NULL) # check that the siteSelector and sensorSelector have valid values
+    if(input$site=="" | is.null(input$sensor)){return(NULL)
     }else{
-      ignore_cols <- sensorAttributeLookup(input$sensorSelector, ignore) # grab the column names to ignore from the sensor table
+      ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
       namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
-      return(selectizeInput('parameterSelector', 'Parameter:', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3))))
-      }
+      return(selectizeInput('variable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
+      )}
   })
-
+  
   # load dataset from external source
   # returns a single sensor dataset when the site and sensor selectors are altered
   sensorData <- reactive({
-    if(is.null(input$sensorSelector)){return(NULL)} # chec that the sensor has a valid value selected
-    cat(file=stderr(), "Switching to", input$sensorSelector, "\n") # log to the console the new sensor type
-    d <- loadSensorCSV(sensorAttributeLookup(input$sensorSelector, urlpath), sensorAttributeLookup(input$sensorSelector, na))
+    if(is.null(input$sensor)){return(NULL)} # check that the sensor has a valid value selected
+    cat(file=stderr(), "Switching to", input$sensor, "\n") # log to the console the new sensor type
+    d <- loadSensorCSV(sensorAttributeLookup(input$sensor, urlpath), sensorAttributeLookup(input$sensor, na))
     return(d)
   })
 
-  
-  
-  
-  # reactive function to filter dataset to time period (number hours) of interest
+  # Helper function to filter the sensor dataset to the time of interest
+  # function filter dataset to time period (number hours) from the most recent timestamp value
   sensorDataTimePeriod <- reactive({
     d <- sensorData() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
     return(d)
   })
-
-  # reactive function to get the min/max dates of the filtered dataset
-  TimePeriodMinMax <- reactive({
-    minDate <- sensorDataTimePeriod() %>% pull(Timestamp) %>% min()
-    maxDate <-sensorDataTimePeriod() %>% pull(Timestamp) %>% max()
-    return(c(minDate, maxDate))
-  })
-  
-
 
   # Generate a plot of the data ----
   output$plot <- renderPlot({
@@ -118,19 +108,19 @@ server <- function(input, output) {
     # waits till the sensors info is loaded
     ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
     colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
-    if(all(!input$selectedVariable %in% colnames)){
+    if(all(!input$variable %in% colnames)){
       return(NULL)
     }
     
-    if(length(input$selectedVariable)==1){
+    if(length(input$variable)==1){
     
-    sensorDataTimePeriod() %>% 
-      ggplot(aes_string(x="Timestamp", y=input$selectedVariable, colour=input$selectedVariable))+
-      geom_point(aes_string(x="Timestamp", y=input$selectedVariable))+
-      ylab(getLabel(input$selectedVariable, sensorAttributeLookup(input$sensor, units)))+
+    sensorDataTimePeriod() %>%
+      ggplot(aes_string(x="Timestamp", y=input$variable, colour=input$variable))+
+      geom_point(aes_string(x="Timestamp", y=input$variable))+
+      ylab(getLabel(input$variable, sensorAttributeLookup(input$sensor, units)))+
       scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
       scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
-      theme_bw() + 
+      theme_bw() +
       theme(panel.border = element_blank(),
             panel.grid.major = element_blank(),
             plot.title = element_text(hjust = 0.5),
@@ -210,7 +200,17 @@ server <- function(input, output) {
       #rowwise() %>% mutate(var = getLabel(var))
   }, hover=TRUE, bordered=TRUE, colnames=FALSE)
   
-  # Downloadable csv of selected dataset ----
+  
+  # Download sensor dataset for filter time period
+  
+  # function to get the min/max dates of the filtered dataset
+  TimePeriodMinMax <- reactive({
+    minDate <- sensorDataTimePeriod() %>% pull(Timestamp) %>% min()
+    maxDate <-sensorDataTimePeriod() %>% pull(Timestamp) %>% max()
+    return(c(minDate, maxDate))
+  })
+  
+  # Downloadable csv of selected dataset for the desired time period ----
   output$downloadData <- downloadHandler(
     filename = function() {
       lower <- format(TimePeriodMinMax()[1], "%Y%m%d%H%M")
