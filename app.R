@@ -10,7 +10,6 @@ library(dplyr)
 # Source the sensor data list and the functions
 source("dataSource.R")
 source("functions.R")
-source("figures.R")
 
 # Define UI for random distribution app ----
 ui <- fluidPage(
@@ -33,6 +32,7 @@ ui <- fluidPage(
       br(),  # br() element to introduce extra vertical spacing ----
       
       uiOutput('parameterSelectorUI'), # conditional dropdown for sensor parameters at selected site and sensor
+      uiOutput('multiParameterSelectorUI'), # conditional dropdown for sensor parameters at selected site and sensor
       
       br(),  # br() element to introduce extra vertical spacing ----
        
@@ -53,10 +53,11 @@ ui <- fluidPage(
     mainPanel(
       
       # Output: Tabset w/ plot, summary, and table ----
-      tabsetPanel(type = "tabs",
-                  tabPanel("Latest Reading", htmlOutput("latestTime"), tableOutput("table2")),
-                  tabPanel("Plot", plotOutput("plot")),
-                  tabPanel("Table", DT::dataTableOutput("table"))
+      tabsetPanel(type = "tabs", id="tabs",
+                  tabPanel("Parameter Plot", plotOutput("singleParamPlot"), value="singleTab"),
+                  tabPanel("Multi-Parameter", plotOutput("multiParamPlot"), value="multiTab"),
+                  tabPanel("Table", DT::dataTableOutput("table")),
+                  tabPanel("Latest Reading", htmlOutput("latestTime"), tableOutput("table2"))
       )
     )
   )
@@ -77,13 +78,23 @@ server <- function(input, output) {
 
   # builds ui dropdown selctor for the sensor variables from all the valid dataframe column names
   output$parameterSelectorUI = renderUI({
-    if(input$site=="" | is.null(input$sensor)){return(NULL)
-    }else{
+    if(input$site=="" | is.null(input$sensor)){return(NULL)}
+    if(input$tabs == "singleTab"){
       ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
       namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
-      return(selectizeInput('variable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
-      )}
+      return(selectizeInput('parameter', 'Parameter', choices=namedLabels, selected=colnames[1]))
+    }
+  })
+  
+  # builds ui dropdown selctor for the multiple sensor variables from all the valid dataframe column names
+  output$multiParameterSelectorUI = renderUI({
+    if(input$tabs == "multiTab"){
+      ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
+      colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
+      namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
+      return(selectizeInput('multiparameter', 'Parameters', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3))))
+    }
   })
   
   # load dataset from external source
@@ -103,21 +114,13 @@ server <- function(input, output) {
   })
 
   # Generate a plot of the data ----
-  output$plot <- renderPlot({
-    
-    # waits till the sensors info is loaded
-    ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
-    colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
-    if(all(!input$variable %in% colnames)){
-      return(NULL)
-    }
-    
-    if(length(input$variable)==1){
-    
+  output$singleParamPlot <- renderPlot({
+    if(all(!input$parameter %in% names(sensorData()))){return(NULL)}
+  
     sensorDataTimePeriod() %>%
-      ggplot(aes_string(x="Timestamp", y=input$variable, colour=input$variable))+
-      geom_point(aes_string(x="Timestamp", y=input$variable))+
-      ylab(getLabel(input$variable, sensorAttributeLookup(input$sensor, units)))+
+      ggplot(aes_string(x="Timestamp", y=input$parameter, colour=input$parameter))+
+      geom_point(aes_string(x="Timestamp", y=input$parameter))+
+      ylab(getLabel(input$parameter, sensorAttributeLookup(input$sensor, units)))+
       scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
       scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
       theme_bw() +
@@ -134,35 +137,40 @@ server <- function(input, output) {
             legend.key.size = unit(0.5, "cm"), # size of legend
             axis.line.x = element_line(color="black", size = 1),
             axis.line.y = element_line(color="black", size = 1))
-    }
-    else if (length(input$selectedVariable)>1){
-      
-      sensorDataTimePeriod() %>% 
-        select(Timestamp, input$selectedVariable) %>% 
-        tidyr::gather("Variable", "Value", -Timestamp) %>% 
-        filter(Variable %in% input$selectedVariable) %>% 
-        ggplot(aes(x=Timestamp, y=Value, colour=factor(Variable, labels=lapply(input$selectedVariable, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))))+
-        geom_point()+
-        scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
-        theme_bw() + 
-        theme(panel.border = element_blank(),
-              panel.grid.major = element_blank(),
-              plot.title = element_text(hjust = 0.5),
-              panel.grid.minor = element_blank(),
-              axis.title.x = element_blank(),
-              axis.title.y = element_text(size=16),
-              axis.text = element_text(size=14),
-              legend.position="bottom", # position of legend or none
-              legend.direction="horizontal", # orientation of legend
-              legend.title= element_blank(), # no title for legend
-              legend.key.size = unit(0.5, "cm"), # size of legend
-              legend.text = element_text(size=14),
-              axis.line.x = element_line(color="black", size = 1),
-              axis.line.y = element_line(color="black", size = 1))+
-        guides(colour = guide_legend(override.aes = list(size=3)))
-      
-    }
   })
+  
+  output$multiParamPlot <- renderPlot({
+    if(all(!input$multiparameter %in% names(sensorData()))){return(NULL)}
+    
+    sensorDataTimePeriod() %>%
+      select(Timestamp, input$multiparameter) %>%
+      tidyr::gather("Variable", "Value", -Timestamp) %>%
+      filter(Variable %in% input$multiparameter) %>%
+      ggplot(aes(x=Timestamp, y=Value, colour=factor(Variable, labels=lapply(input$multiparameter, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))))+
+      geom_point()+
+      scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
+      theme_bw() +
+      theme(panel.border = element_blank(),
+            panel.grid.major = element_blank(),
+            plot.title = element_text(hjust = 0.5),
+            panel.grid.minor = element_blank(),
+            axis.title.x = element_blank(),
+            axis.title.y = element_text(size=16),
+            axis.text = element_text(size=14),
+            legend.position="bottom", # position of legend or none
+            legend.direction="horizontal", # orientation of legend
+            legend.title= element_blank(), # no title for legend
+            legend.key.size = unit(0.5, "cm"), # size of legend
+            legend.text = element_text(size=14),
+            axis.line.x = element_line(color="black", size = 1),
+            axis.line.y = element_line(color="black", size = 1))+
+      guides(colour = guide_legend(override.aes = list(size=3)))
+  })
+
+    
+
+
+  
   
   # Generate an HTML table view of the data ----
   output$table <- DT::renderDataTable(DT::datatable({
