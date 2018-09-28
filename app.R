@@ -23,16 +23,15 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
       
-      selectInput("site", "Site:", c(siteList())), # Dropdown Selector for Sensor Dataset
+      selectInput("siteSelector", "Site:", c(siteList())), # Dropdown Selector for Sensor Dataset
       
       br(),  # br() element to introduce extra vertical spacing ----
       
-      #selectInput("sensor", "Sensor:", c(sensorList())), # Dropdown Selector for Sensor Dataset
-      uiOutput('sensorPicker'), # conditional
+      uiOutput('sensorSelectorUI'), # conditional dropdown for datasets at selected site
       
       br(),  # br() element to introduce extra vertical spacing ----
       
-      uiOutput('variable'), # conditional inputs
+      uiOutput('parameterSelectorUI'), # conditional dropdown for sensor parameters at selected site and sensor
       
       br(),  # br() element to introduce extra vertical spacing ----
        
@@ -65,31 +64,39 @@ ui <- fluidPage(
 # Define server logic for app ----
 server <- function(input, output) {
   
-  # builds ui dropdown selctor to list all the data sources from the selected site
-  output$sensorPicker = renderUI({
-    if(input$site==""){
-      return(NULL)
-    }
-    selected_site <- input$site
-
-    # data sets at the selected site
-    site_sensors <- sensors %>% filter(site==selected_site)
-    sensorList <- unique(site_sensors$sensorName)
-
-    selectInput("sensor", "Sensor:", c(sensorList)) # Dropdown Selector for Sensor Dataset
+  # UI functions to build the dropdown menus in the shiny app
+  # builds UI dropdown selctor for all the data sources at selected site
+  output$sensorSelectorUI = renderUI({
+    if(input$siteSelector==""){return(NULL)}     # checks that the siteSelector is defined
+    
+    site_sensors <- sensors %>% filter(site==input$siteSelector) # filter to just the data sets at the selected site
+    sensorList <- unique(site_sensors$sensorName) # TODO see if this can be combined with the filter
+    return(selectInput("sensorSelector", "Sensor:", c(sensorList))) # Dropdown Selector for Sensor Dataset
   })
 
-  # reactive function to return dataset for a selected sensor type
-  sensorData <- reactive({
-    if(is.null(input$sensor)){
-      return(NULL)
-    }
-    cat(file=stderr(), "Switching to", input$sensor, "\n")
-    d <- loadSensorCSV(sensorAttributeLookup(input$sensor, urlpath), sensorAttributeLookup(input$sensor, na))
+  # builds UI dropdown selctor for all the parameter options for a given sensor dataset by reading in column names
+  output$parameterSelectorUI = renderUI({
+    if(input$siteSelector=="" | is.null(input$sensorSelector | is.null(sensorData))){return(NULL) # check that the siteSelector and sensorSelector have valid values
+    }else{
+      ignore_cols <- sensorAttributeLookup(input$sensorSelector, ignore) # grab the column names to ignore from the sensor table
+      colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
+      namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
+      return(selectizeInput('parameterSelector', 'Parameter:', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3))))
+      }
+  })
 
+  # load dataset from external source
+  # returns a single sensor dataset when the site and sensor selectors are altered
+  sensorData <- reactive({
+    if(is.null(input$sensorSelector)){return(NULL)} # chec that the sensor has a valid value selected
+    cat(file=stderr(), "Switching to", input$sensorSelector, "\n") # log to the console the new sensor type
+    d <- loadSensorCSV(sensorAttributeLookup(input$sensorSelector, urlpath), sensorAttributeLookup(input$sensorSelector, na))
     return(d)
   })
 
+  
+  
+  
   # reactive function to filter dataset to time period (number hours) of interest
   sensorDataTimePeriod <- reactive({
     d <- sensorData() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
@@ -103,19 +110,7 @@ server <- function(input, output) {
     return(c(minDate, maxDate))
   })
   
-  # builds ui dropdown selctor from the data source column names
-  output$variable = renderUI({
-    # print(input$sensor)
-    # print(input$site)
-    if(input$site=="" | is.null(input$sensor)){
-      return(NULL)
-    }else{
-      ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
-      colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
-      namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
-      return(selectizeInput('selectedVariable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
-    )}
-      })
+
 
   # Generate a plot of the data ----
   output$plot <- renderPlot({
