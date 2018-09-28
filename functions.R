@@ -34,10 +34,16 @@ sensorList <- function(){
   return(list_sensorNames)
 }
 
+# list of all sites listed in the data.frame
+siteList <- function(){
+  list_siteNames <- unique(sensors$site)
+  return(list_siteNames)
+}
+
 
 # loads sensor's data from a csv file 
 loadSensorCSV <- function(fullurl, na=c("", "NA")){
-  sensorData <- readr::read_csv(url(fullurl), na=na) # loads a CSV file from a publicly hosted dataset (ie dropbox, github)
+  sensorData <- readr::read_csv(url(fullurl), na=na, col_types = cols()) # loads a CSV file from a publicly hosted dataset (ie dropbox, github)
   names(sensorData) <- make.names(names(sensorData)) # prettify the dataset column names (removes spaces + illegal characters)
   return(sensorData)
 }

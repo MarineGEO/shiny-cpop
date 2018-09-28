@@ -5,7 +5,7 @@ library(ggplot2)
 library(readr)
 library(magrittr)
 library(dplyr)
-library(scales)
+#library(scales)
 
 # Source the sensor data list and the functions
 source("dataSource.R")
@@ -23,7 +23,12 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
       
-      selectInput("sensor", "Sensor:", c(sensorList())), # Dropdown Selector for Sensor Dataset
+      selectInput("site", "Site:", c(siteList())), # Dropdown Selector for Sensor Dataset
+      
+      br(),  # br() element to introduce extra vertical spacing ----
+      
+      #selectInput("sensor", "Sensor:", c(sensorList())), # Dropdown Selector for Sensor Dataset
+      uiOutput('sensorPicker'), # conditional
       
       br(),  # br() element to introduce extra vertical spacing ----
       
@@ -59,21 +64,38 @@ ui <- fluidPage(
 
 # Define server logic for app ----
 server <- function(input, output) {
+  
+  # builds ui dropdown selctor to list all the data sources from the selected site
+  output$sensorPicker = renderUI({
+    if(input$site==""){
+      return(NULL)
+    }
+    selected_site <- input$site
+
+    # data sets at the selected site
+    site_sensors <- sensors %>% filter(site==selected_site)
+    sensorList <- unique(site_sensors$sensorName)
+
+    selectInput("sensor", "Sensor:", c(sensorList)) # Dropdown Selector for Sensor Dataset
+  })
 
   # reactive function to return dataset for a selected sensor type
   sensorData <- reactive({
+    if(is.null(input$sensor)){
+      return(NULL)
+    }
     cat(file=stderr(), "Switching to", input$sensor, "\n")
     d <- loadSensorCSV(sensorAttributeLookup(input$sensor, urlpath), sensorAttributeLookup(input$sensor, na))
-    
+
     return(d)
   })
-  
+
   # reactive function to filter dataset to time period (number hours) of interest
   sensorDataTimePeriod <- reactive({
     d <- sensorData() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
     return(d)
   })
-  
+
   # reactive function to get the min/max dates of the filtered dataset
   TimePeriodMinMax <- reactive({
     minDate <- sensorDataTimePeriod() %>% pull(Timestamp) %>% min()
@@ -83,16 +105,28 @@ server <- function(input, output) {
   
   # builds ui dropdown selctor from the data source column names
   output$variable = renderUI({
-      ignore_cols <- sensorAttributeLookup(input$sensor, ignore)[[1]] # grab the column names to ignore from the sensor table
+    # print(input$sensor)
+    # print(input$site)
+    if(input$site=="" | is.null(input$sensor)){
+      return(NULL)
+    }else{
+      ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
-      
       namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
-      selectizeInput('selectedVariable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
-    })
-  
+      return(selectizeInput('selectedVariable', 'Variable', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3)))
+    )}
+      })
+
   # Generate a plot of the data ----
   output$plot <- renderPlot({
-    Sys.sleep(1)
+    
+    # waits till the sensors info is loaded
+    ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
+    colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
+    if(all(!input$selectedVariable %in% colnames)){
+      return(NULL)
+    }
+    
     if(length(input$selectedVariable)==1){
     
     sensorDataTimePeriod() %>% 
@@ -153,6 +187,7 @@ server <- function(input, output) {
   
   # reactive function return the lastest record
   latestRecord <- reactive({
+    if(is.null(sensorData())){return(NULL)}
     d <- sensorData() %>% arrange(Timestamp) %>% tail(1)
     return(d)
   })
@@ -164,15 +199,19 @@ server <- function(input, output) {
     str1 <- paste("<h2>", r$Timestamp, "</h2>")
     HTML(str1)
   })
-  
+
   # Generate an HTML table view of the data ----
   output$table2 <- renderTable({
-    ignore_cols <- sensorAttributeLookup(input$sensor, ignore)[[1]] # grab the column names to ignore from the sensor table
+      if(is.null(latestRecord())| is.null(input$sensor)){
+        return(NULL)
+      }
+
+    ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
     d <- latestRecord()[!names(latestRecord()) %in% ignore_cols]
-    
-    d %>% rownames_to_column %>% 
-      tidyr::gather(var, value, -rowname) %>% 
-      tidyr::spread(rowname, value) #%>% 
+
+    d %>% rownames_to_column %>%
+      tidyr::gather(var, value, -rowname) %>%
+      tidyr::spread(rowname, value) #%>%
       #rowwise() %>% mutate(var = getLabel(var))
   }, hover=TRUE, bordered=TRUE, colnames=FALSE)
   
