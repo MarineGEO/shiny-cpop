@@ -1,3 +1,17 @@
+# shiny app demo showing SERC water quality, level and met data from early 2017
+library(shiny)
+library(lubridate)
+library(ggplot2)
+library(readr)
+library(magrittr)
+library(dplyr)
+#library(scales)
+
+# Source the sensor data list and the functions
+source("dataSource.R")
+source("functions.R")
+
+
 function(input, output) {
   
   # UI functions to build the dropdown menus in the shiny app
