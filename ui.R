@@ -11,6 +11,16 @@ header <- dashboardHeader(
 
 body <- dashboardBody(
   fluidRow(
+    box(title = "Instructions",
+       status = "primary",
+       solidHeader = F,
+       collapsible = F,
+       width = 12,
+       fluidRow(
+                column(width = 2, align = "center",
+                       img(src="https://serc.si.edu/sites/default/files/styles/slideshow-wide/public/pictures/MarineBiodiversityLab/marinegeo.jpg?itok=jYDJ9TYo&timestamp=1459367380", width=250))),
+       column(width = 10, textOutput( "instructions" ))),
+    
     column(width = 3,
            box(width = NULL, status = "primary",
                selectInput("site", "Site:", c(siteList())), # Dropdown Selector for Sensor Dataset
