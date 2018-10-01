@@ -1,5 +1,9 @@
 library(shinydashboard)
 
+# Source the sensor data list and the functions
+source("functions.R", local=TRUE)
+source("dataSource.R", local=TRUE)
+
 header <- dashboardHeader(
   title = "MarineGEO Sensor Dashboard",
   titleWidth = 450
