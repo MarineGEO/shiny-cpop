@@ -50,17 +50,16 @@ function(input, output) {
   })
   
   
-  # summary table for the last 24 hours
-  output$summary24 <- renderTable({
+  # summary table for the period of interest
+  output$summaryTable <- renderTable({
     if(is.null(input$sensor)){return(NULL)} # check that the sensor has a valid value selected
     
-    # calculate the timestamp for 24 hours ago
-    maxDate <- sensorData() %>% pull(Timestamp) %>% max()
-    date24 <- maxDate - (24*60*60)
+    # # calculate the timestamp for 24 hours ago
+    # maxDate <- sensorData() %>% pull(Timestamp) %>% max()
+    # date24 <- maxDate - (24*60*60)
     
-    # summary for the last twenty four hours of data
-    twentyfour <- sensorData() %>% 
-      filter(Timestamp>date24) %>% 
+    # summary for the selected period of data
+    summaryStats <- sensorDataTimePeriod() %>% 
       select(-c(sensorAttributeLookup(input$sensor, 'ignore'))) %>% 
       tidyr::gather("variable", "value") %>% group_by(variable) %>% 
       summarize(Mean=mean(value, na.rm = TRUE), Low=min(value, na.rm = TRUE), High=max(value, na.rm = TRUE), StdDev=sd(value, na.rm = TRUE), NumberInvalid=sum(is.na(value)))
@@ -71,8 +70,8 @@ function(input, output) {
       gather(var, value, -rowname) %>% 
       spread(rowname, value) %>% rename("LatestValue"=`1`)
     
-    # join the 24 hour summary together with the latest values
-    summaryTable <- left_join(latest, twentyfour, by=c("var"="variable")) %>% rowwise() %>% 
+    # join the summary together with the latest values
+    summaryTable <- left_join(latest, summaryStats, by=c("var"="variable")) %>% rowwise() %>% 
       mutate("Parameter"=getLabel(var, sensorAttributeLookup(input$sensor, units))) %>%
       select(-c(var)) %>% 
       select(Parameter, everything())
