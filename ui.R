@@ -34,16 +34,10 @@ body <- dashboardBody(
     column(width = 9,
            box(width = NULL, solidHeader = TRUE,
                plotOutput("singleParamPlot")
-           )#,
-           # fluidRow(
-           #   # A static valueBox
-           #   valueBox(10 * 2, "New Orders", icon = icon("credit-card")),
-           #   
-           #   # Dynamic valueBoxes
-           #   valueBoxOutput("currentBox"),
-           #   
-           #   valueBoxOutput("minBox")
-           # )
+           ),
+           box(width = NULL, solidHeader = TRUE,
+             tableOutput("summary24"))
+            
     )
   )
 )

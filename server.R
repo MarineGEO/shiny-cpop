@@ -49,6 +49,41 @@ function(input, output) {
     return(d)
   })
   
+  
+  # summary table for the last 24 hours
+  output$summary24 <- renderTable({
+    
+    # calculate the timestamp for 24 hours ago
+    maxDate <- sensorData() %>% pull(Timestamp) %>% max()
+    date24 <- maxDate - (24*60*60)
+    
+    # summary for the last twenty four hours of data
+    twentyfour <- sensorData() %>% 
+      filter(Timestamp>date24) %>% 
+      select(-c(sensorAttributeLookup(input$sensor, 'ignore'))) %>% 
+      tidyr::gather("variable", "value") %>% group_by(variable) %>% 
+      summarize(Mean=mean(value, na.rm = TRUE), Low=min(value, na.rm = TRUE), High=max(value, na.rm = TRUE), StdDev=sd(value, na.rm = TRUE), NumberInvalid=sum(is.na(value)))
+
+    
+    # most recent value
+    latest <- latestRecord() %>% select(-c(sensorAttributeLookup(input$sensor, 'ignore'))) %>% rownames_to_column %>% 
+      gather(var, value, -rowname) %>% 
+      spread(rowname, value) %>% rename("LatestValue"=`1`)
+    
+    # join the 24 hour summary together with the latest values
+    summaryTable <- left_join(latest, twentyfour, by=c("var"="variable")) %>% rowwise() %>% 
+      mutate("Parameter"=getLabel(var, sensorAttributeLookup(input$sensor, units))) %>%
+      select(-c(var)) %>% 
+      select(Parameter, everything())
+    print(summaryTable)
+    return(summaryTable)
+  }
+)
+  
+  
+  
+  
+  
   # Generate a plot of the data ----
   output$singleParamPlot <- renderPlot({
     if(all(!input$parameter %in% names(sensorData()))){return(NULL)}
