@@ -1,5 +1,5 @@
 library(shinydashboard)
-
+library(plotly)
 # Source the sensor data list and the functions
 source("functions.R", local=TRUE)
 source("dataSource.R", local=TRUE)
@@ -32,7 +32,7 @@ body <- dashboardBody(
     ),
     column(width = 9,
            box(width = NULL, solidHeader = TRUE,
-               plotOutput("singleParamPlot")
+               plotlyOutput("singleParamPlot")
            )
     )
   )

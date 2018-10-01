@@ -5,7 +5,8 @@ library(ggplot2)
 library(readr)
 library(magrittr)
 library(dplyr)
-#library(scales)
+library(crosstalk)
+library(plotly)
 
 # Source the sensor data list and the functions
 source("functions.R", local=TRUE)
@@ -45,34 +46,78 @@ function(input, output) {
   # Helper function to filter the sensor dataset to the time of interest
   # function filter dataset to time period (number hours) from the most recent timestamp value
   sensorDataTimePeriod <- reactive({
-    d <- sensorData() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
+    d <- sensorData() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(24*20))
     return(d)
   })
   
   # Generate a plot of the data ----
-  output$singleParamPlot <- renderPlot({
+  output$singleParamPlot <- renderPlotly({
     if(all(!input$parameter %in% names(sensorData()))){return(NULL)}
     
-    sensorDataTimePeriod() %>%
-      ggplot(aes_string(x="Timestamp", y=input$parameter, colour=input$parameter))+
-      geom_point(aes_string(x="Timestamp", y=input$parameter))+
-      ylab(getLabel(input$parameter, sensorAttributeLookup(input$sensor, units)))+
-      scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
-      scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
-      theme_bw() +
-      theme(panel.border = element_blank(),
-            panel.grid.major = element_blank(),
-            plot.title = element_text(hjust = 0.5),
-            panel.grid.minor = element_blank(),
-            axis.title.x = element_blank(),
-            axis.title.y = element_text(size=16),
-            axis.text = element_text(size=14),
-            legend.position="none", # position of legend or none
-            legend.direction="horizontal", # orientation of legend
-            legend.title= element_blank(), # no title for legend
-            legend.key.size = unit(0.5, "cm"), # size of legend
-            axis.line.x = element_line(color="black", size = 1),
-            axis.line.y = element_line(color="black", size = 1))
+    f <- list(
+      #family = "Courier New, monospace",
+      size = 18,
+      color = "#7f7f7f"
+    )
+    x <- list(
+      title = "Timestamp",
+      titlefont = f
+    )
+    y <- list(
+      title = getLabel(input$parameter, sensorAttributeLookup(input$sensor, units)),
+      titlefont = f
+    )
+    
+    sensorDataTimePeriod() %>% plot_ly(x = ~Timestamp, y = ~Temperature, 
+                                       type="scatter", mode = 'markers', 
+                                       marker = list(size = 5, color = 'rgba(54, 127, 169, 1)',
+                                                     line = list(color = 'rgba(54, 127, 169, .8)', 
+                                                                 width = 1))) %>% 
+      layout(
+        xaxis = list( title = "Timestamp",
+                      titlefont = f,
+          rangeselector = list(
+            buttons = list(
+              list(
+                count = 3, 
+                label = "3 day", 
+                step = "day",
+                stepmode = "backward"),
+              list(
+                count = 5, 
+                label = "5 day", 
+                step = "day",
+                stepmode = "backward"),
+              list(
+                count = 10, 
+                label = "10 day", 
+                step = "day",
+                stepmode = "backward"),
+              list(step = "all")))),
+        
+        yaxis = list(title = getLabel(input$parameter, sensorAttributeLookup(input$sensor, units)),
+                      titlefont = f))
+    
+    # sensorDataTimePeriod() %>%
+    #   ggplot(aes_string(x="Timestamp", y=input$parameter, colour=input$parameter))+
+    #   geom_point(aes_string(x="Timestamp", y=input$parameter))+
+    #   ylab(getLabel(input$parameter, sensorAttributeLookup(input$sensor, units)))+
+    #   scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
+    #   scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
+    #   theme_bw() +
+    #   theme(panel.border = element_blank(),
+    #         panel.grid.major = element_blank(),
+    #         plot.title = element_text(hjust = 0.5),
+    #         panel.grid.minor = element_blank(),
+    #         axis.title.x = element_blank(),
+    #         axis.title.y = element_text(size=16),
+    #         axis.text = element_text(size=14),
+    #         legend.position="none", # position of legend or none
+    #         legend.direction="horizontal", # orientation of legend
+    #         legend.title= element_blank(), # no title for legend
+    #         legend.key.size = unit(0.5, "cm"), # size of legend
+    #         axis.line.x = element_line(color="black", size = 1),
+    #         axis.line.y = element_line(color="black", size = 1))
   })
   
   # Generate an HTML table view of the data ----
