@@ -22,14 +22,14 @@ waterquality.labels <- c("Temperature"="Temperature (°C)",
            "Battery"= "Battery (Volts)")
 
 met.labels <- c("Air.Temperature"="Air Temperature (°C)",
-           "Barometric.Pressure"="Barometric Pressure",
-           "Daily.Rain"="Daily Rain ()",
+           "Barometric.Pressure"="Barometric Pressure (mbar)",
+           "Daily.Rain"="Daily Rain (mm)",
            "PAR"="PAR",
-           "Rain.Rate"="Rain Rate",
-           "Relative.Humidity"="Relative Humidity",
-           "Wind.Direction"="Wind Direction",
-           "Wind.Gust"="Wind Gust",
-           "Wind.Speed"="Wind Speed"
+           "Rain.Rate"="Rain Rate (mm/hr)",
+           "Relative.Humidity"="Relative Humidity (%)",
+           "Wind.Direction"="Wind Direction (°)",
+           "Wind.Gust"="Wind Gust (mph)",
+           "Wind.Speed"="Wind Speed (mph)"
            )
 
 waterlevel.labels <- c("Air.Temperature"="Air Temperature (°C)",
@@ -48,6 +48,6 @@ sensors <- tribble(
   ~site, ~sensorName, ~type, ~urlpath, ~ignore, ~na, ~units,
   "SERC", "SERC-WaterQuality", "waterquality", "https://dl.dropboxusercontent.com/s/n8sagrl8iwdmktm/2017_Water_Quality_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Bat"),c("", "NA"), waterquality.labels,
   "SERC", "SERC-MET", "met", "https://dl.dropboxusercontent.com/s/rnkq0i0r7uxc5l5/2017_MET_RAW_SERC.csv?dl=0", c("Timestamp", "Site"),c("", "NA", "-Invalid-"), met.labels,
-  "SERC", "SERC-WaterLevel", "waterlevel", "https://dl.dropboxusercontent.com/s/byukiwxjtxkw0nm/2017_Water_Level_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Status"),c("", "NA"), NA,
+  "SERC", "SERC-WaterLevel", "waterlevel", "https://dl.dropboxusercontent.com/s/byukiwxjtxkw0nm/2017_Water_Level_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Status"),c("", "NA"), waterlevel.labels,
   "SERC2", "SERC-MET-RAW", "waterlevel", "https://raw.githubusercontent.com/MarineGEO/cpop-example-datasets/master/2017_MET_RAW_SERC.csv", c("Timestamp", "Site", "Status"),"-Invalid-", met.labels
 )

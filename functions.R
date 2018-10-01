@@ -50,9 +50,9 @@ loadSensorCSV <- function(fullurl, na=c("", "NA")){
 
 # pretty variable name with units
 getLabel <- function(variable, labeledUnits){
-  variable <- enquo(variable)
+  eqvariable <- enquo(variable)
   labeledDF <- bind_rows(labeledUnits) # turns named list into a dataframe
-  label <- tryCatch(labeledDF %>% select(!!variable) %>% pull(), error=function(cond){return(variable)}) # pull out the units for the selected variable
+  label <- tryCatch(labeledDF %>% select(!!eqvariable) %>% pull(), error=function(cond){return(variable)}) # pull out the units for the selected variable
   return(label)
   }
 

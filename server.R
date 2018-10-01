@@ -121,6 +121,22 @@ function(input, output) {
     return(c(minDate, maxDate))
   })
   
+  # value boxes
+  output$currentBox <- renderValueBox({
+    d <- latestRecord() %>% pull(input$parameter)
+    valueBox(d, paste("Current", getLabel(input$parameter, sensorAttributeLookup(input$sensor, units))), icon = icon("list"),
+      color = "blue"
+    )
+  })
+  
+  output$minBox <- renderValueBox({
+    d <- sensorDataTimePeriod() %>% pull(input$parameter) %>% min()
+    valueBox(d, paste("Minimum", getLabel(input$parameter, sensorAttributeLookup(input$sensor, units))), icon = icon("list"),
+             color = "blue"
+    )
+  })
+  
+  
   # Downloadable csv of selected dataset for the desired time period ----
   output$downloadData <- downloadHandler(
     filename = function() {
