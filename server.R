@@ -52,6 +52,7 @@ function(input, output) {
   
   # summary table for the last 24 hours
   output$summary24 <- renderTable({
+    if(is.null(input$sensor)){return(NULL)} # check that the sensor has a valid value selected
     
     # calculate the timestamp for 24 hours ago
     maxDate <- sensorData() %>% pull(Timestamp) %>% max()

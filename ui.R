@@ -32,11 +32,10 @@ body <- dashboardBody(
 
     ),
     column(width = 9,
-           box(width = NULL, solidHeader = TRUE,
-               plotOutput("singleParamPlot")
-           ),
-           box(width = NULL, solidHeader = TRUE,
-             tableOutput("summary24"))
+               tabBox(width = NULL, 
+                      tabPanel("Graph", plotOutput("singleParamPlot")),
+                      tabPanel("24 Hour Summary", tableOutput("summary24"))
+                      )
             
     )
   )
