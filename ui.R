@@ -27,6 +27,7 @@ body <- dashboardBody(
                selectInput("site", "Site:", c(siteList())), # Dropdown Selector for Sensor Dataset
                uiOutput('sensorSelectorUI'), # conditional dropdown for datasets at selected site
                uiOutput('parameterSelectorUI'), # conditional dropdown for sensor parameters at selected site and sensor
+               uiOutput('multiParameterSelectorUI'), # conditional dropdown for sensor parameters at selected site and sensor
                selectInput("timeSpan", "View data from previous:",
                            c("3 hours" = 3, "6 hours" = 6, "12 hours" = 12, "1 day" = 24, "2 days" = 2*24, "3 days" = 3*24, 
                              "4 days" = 4*24, "5 days" = 5*24, "1 Week" = 7*24, "10 days" = 10*24, "2 Weeks" = 2*7*24, 
@@ -41,8 +42,9 @@ body <- dashboardBody(
 
     ),
     column(width = 9,
-               tabBox(width = NULL, 
-                      tabPanel("Graph", plotOutput("singleParamPlot")),
+               tabBox(width = NULL, id="tabs",
+                      tabPanel("Graph", plotOutput("singleParamPlot"), value="singleTab"),
+                      tabPanel("Multi-Parameter", plotOutput("multiParamPlot"), value="multiTab"),
                       tabPanel("Summary", htmlOutput("timeSpan"), tableOutput("summaryTable")),
                       tabPanel("Hourly Averages", DT::dataTableOutput("hourlyAverages")),
                       tabPanel("Map", leafletOutput("sensorMap"))

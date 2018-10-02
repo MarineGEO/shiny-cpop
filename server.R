@@ -28,10 +28,21 @@ function(input, output) {
   # builds ui dropdown selctor for the sensor variables from all the valid dataframe column names
   output$parameterSelectorUI = renderUI({
     if(input$site=="" | is.null(input$sensor)){return(NULL)}
+    if(input$tabs == "singleTab"){
       ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
       colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
       namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
-      return(selectizeInput('parameter', 'Parameter', choices=namedLabels, selected=colnames[1]))
+      return(selectizeInput('parameter', 'Parameter', choices=namedLabels, selected=colnames[1]))}
+  })
+  
+  # builds ui dropdown selctor for the multiple sensor variables from all the valid dataframe column names
+  output$multiParameterSelectorUI = renderUI({
+    if(input$tabs == "multiTab"){
+      ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
+      colnames <- names(sensorData())[!names(sensorData()) %in% ignore_cols] # select all the column names in csv that are not in ignore list
+      namedLabels <- setNames(colnames, lapply(colnames, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))
+      return(selectizeInput('multiparameter', 'Parameters', choices=namedLabels, selected=colnames[1], multiple=TRUE, options=(list(maxItems=3))))
+    }
   })
   
   # load dataset from external source
@@ -124,6 +135,36 @@ function(input, output) {
             axis.line.x = element_line(color="black", size = 1),
             axis.line.y = element_line(color="black", size = 1))
   })
+  
+  ## Multi-parameter plot
+  output$multiParamPlot <- renderPlot({
+    if(all(!input$multiparameter %in% names(sensorData()))){return(NULL)}
+    
+    sensorDataTimePeriod() %>%
+      select(Timestamp, input$multiparameter) %>%
+      tidyr::gather("Variable", "Value", -Timestamp) %>%
+      filter(Variable %in% input$multiparameter) %>%
+      ggplot(aes(x=Timestamp, y=Value, colour=factor(Variable, labels=lapply(input$multiparameter, getLabel, labeledUnits=sensorAttributeLookup(input$sensor, units)))))+
+      geom_point()+
+      scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
+      theme_bw() +
+      theme(panel.border = element_blank(),
+            panel.grid.major = element_blank(),
+            plot.title = element_text(hjust = 0.5),
+            panel.grid.minor = element_blank(),
+            axis.title.x = element_blank(),
+            axis.title.y = element_text(size=16),
+            axis.text = element_text(size=14),
+            legend.position="bottom", # position of legend or none
+            legend.direction="horizontal", # orientation of legend
+            legend.title= element_blank(), # no title for legend
+            legend.key.size = unit(0.5, "cm"), # size of legend
+            legend.text = element_text(size=14),
+            axis.line.x = element_line(color="black", size = 1),
+            axis.line.y = element_line(color="black", size = 1))+
+      guides(colour = guide_legend(override.aes = list(size=3)))
+  })
+  
   
   # # Generate an HTML table view of the data ----
   # output$table <- DT::renderDataTable(DT::datatable({
