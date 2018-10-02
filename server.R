@@ -45,6 +45,23 @@ function(input, output) {
     }
   })
   
+  # dataset min max 
+  # function to get the min/max dates of the full dataset
+  dataMinMax <- reactive({
+    minDate <- sensorData() %>% pull(Timestamp) %>% min()
+    maxDate <-sensorData() %>% pull(Timestamp) %>% max()
+    return(c(minDate, maxDate))
+  })
+  
+  # builds ui date selctor for custom range
+  output$customDateUI = renderUI({
+    if(input$timeSpan == "custom"){
+      limits <- dataMinMax()
+      return(dateRangeInput("customDates", label="Date Range", start=limits[1], end=limits[2], min=limits[1], max=limits[2]))
+    }
+    #else{return(dateRangeInput("customDates", label="Date Range"))}
+  })
+  
   # load dataset from external source
   # returns a single sensor dataset when the site and sensor selectors are altered
   sensorData <- reactive({
@@ -57,7 +74,14 @@ function(input, output) {
   # Helper function to filter the sensor dataset to the time of interest
   # function filter dataset to time period (number hours) from the most recent timestamp value
   sensorDataTimePeriod <- reactive({
-    d <- sensorData() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))
+    if(input$timeSpan == "custom"){
+      print(input$customDates)
+      maxRange <- max(input$customDates)
+      minRange <- min(input$customDates)
+      d <- sensorData() %>% filter(Timestamp>minRange & Timestamp<maxRange)
+      print(d)
+    }else{
+    d <- sensorData() %>% filter(Timestamp>ymd_hms(max(Timestamp))-hours(input$timeSpan))}
     return(d)
   })
   
