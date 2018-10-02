@@ -5,7 +5,8 @@ library(ggplot2)
 library(readr)
 library(magrittr)
 library(dplyr)
-#library(scales)
+library(tidyr)
+library(leaflet)
 
 # Source the sensor data list and the functions
 source("functions.R", local=TRUE)
@@ -49,22 +50,16 @@ function(input, output) {
     return(d)
   })
   
-  
   # summary table for the period of interest
   output$summaryTable <- renderTable({
     if(is.null(input$sensor)){return(NULL)} # check that the sensor has a valid value selected
-    
-    # # calculate the timestamp for 24 hours ago
-    # maxDate <- sensorData() %>% pull(Timestamp) %>% max()
-    # date24 <- maxDate - (24*60*60)
-    
+  
     # summary for the selected period of data
     summaryStats <- sensorDataTimePeriod() %>% 
       select(-c(sensorAttributeLookup(input$sensor, 'ignore'))) %>% 
       tidyr::gather("variable", "value") %>% group_by(variable) %>% 
       summarize(Mean=mean(value, na.rm = TRUE), Low=min(value, na.rm = TRUE), High=max(value, na.rm = TRUE), StdDev=sd(value, na.rm = TRUE), NumberInvalid=sum(is.na(value)))
 
-    
     # most recent value
     latest <- latestRecord() %>% select(-c(sensorAttributeLookup(input$sensor, 'ignore'))) %>% rownames_to_column %>% 
       gather(var, value, -rowname) %>% 
@@ -75,14 +70,34 @@ function(input, output) {
       mutate("Parameter"=getLabel(var, sensorAttributeLookup(input$sensor, units))) %>%
       select(-c(var)) %>% 
       select(Parameter, everything())
-    print(summaryTable)
     return(summaryTable)
-  }
-)
+    }, hover=TRUE, bordered=TRUE, colnames=TRUE
+  )
   
   
+  # # hourly averages
+  output$hourlyAverages <- DT::renderDataTable({
+    if(is.null(input$sensor)){return(NULL)} # check that the sensor has a valid value selected
+
+    # summary for the selected period of data
+    hourly <- sensorDataTimePeriod() %>%
+      mutate(interval=floor_date(Timestamp, unit="hour")) %>%  # creates a column with timestamp rounded down to the hour
+      select(-c(sensorAttributeLookup(input$sensor, 'ignore'))) %>%
+      group_by(interval) %>%
+      summarize_all(funs(mean)) %>%
+      arrange(desc(interval))
+    print(hourly)
+    
+    return(hourly)
+  }, options = list(scrollX = TRUE))
   
-  
+  # render text with the time span for the data in the summary file
+  output$timeSpan <- renderUI({
+    lower <- format(TimePeriodMinMax()[1], "%Y%m%d%H%M")
+    upper <- format(TimePeriodMinMax()[2], "%Y%m%d%H%M")
+    str1 <- paste( "<h4>", "Date Range:", TimePeriodMinMax()[1], "-", TimePeriodMinMax()[2], "</h4>")
+    HTML(str1)
+  })
   
   # Generate a plot of the data ----
   output$singleParamPlot <- renderPlot({
@@ -110,10 +125,10 @@ function(input, output) {
             axis.line.y = element_line(color="black", size = 1))
   })
   
-  # Generate an HTML table view of the data ----
-  output$table <- DT::renderDataTable(DT::datatable({
-    sensorDataTimePeriod()
-  }))
+  # # Generate an HTML table view of the data ----
+  # output$table <- DT::renderDataTable(DT::datatable({
+  #   sensorDataTimePeriod()
+  # }))
   
   
   # reactive function return the lastest record
@@ -131,21 +146,27 @@ function(input, output) {
     HTML(str1)
   })
   
-  # Generate an HTML table view of the data ----
-  output$table2 <- renderTable({
-    if(is.null(latestRecord())| is.null(input$sensor)){
-      return(NULL)
-    }
-    
-    ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
-    d <- latestRecord()[!names(latestRecord()) %in% ignore_cols]
-    
-    d %>% rownames_to_column %>%
-      tidyr::gather(var, value, -rowname) %>%
-      tidyr::spread(rowname, value) #%>%
-    #rowwise() %>% mutate(var = getLabel(var))
-  }, hover=TRUE, bordered=TRUE, colnames=FALSE)
+  # # Generate an HTML table view of the data ----
+  # output$table2 <- renderTable({
+  #   if(is.null(latestRecord())| is.null(input$sensor)){
+  #     return(NULL)
+  #   }
+  #   
+  #   ignore_cols <- sensorAttributeLookup(input$sensor, ignore) # grab the column names to ignore from the sensor table
+  #   d <- latestRecord()[!names(latestRecord()) %in% ignore_cols]
+  #   
+  #   d %>% rownames_to_column %>%
+  #     tidyr::gather(var, value, -rowname) %>%
+  #     tidyr::spread(rowname, value) #%>%
+  #   #rowwise() %>% mutate(var = getLabel(var))
+  # }, hover=TRUE, bordered=TRUE, colnames=FALSE)
   
+  output$sensorMap <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      addMarkers(lat=sensorAttributeLookup(input$sensor, coordinates)[1], lng=sensorAttributeLookup(input$sensor, coordinates)[2], popup=input$sensor)
+  })
+
   
   # Download sensor dataset for filter time period
   
@@ -156,22 +177,7 @@ function(input, output) {
     return(c(minDate, maxDate))
   })
   
-  # value boxes
-  output$currentBox <- renderValueBox({
-    d <- latestRecord() %>% pull(input$parameter)
-    valueBox(d, paste("Current", getLabel(input$parameter, sensorAttributeLookup(input$sensor, units))), icon = icon("list"),
-      color = "blue"
-    )
-  })
-  
-  output$minBox <- renderValueBox({
-    d <- sensorDataTimePeriod() %>% pull(input$parameter) %>% min()
-    valueBox(d, paste("Minimum", getLabel(input$parameter, sensorAttributeLookup(input$sensor, units))), icon = icon("list"),
-             color = "blue"
-    )
-  })
-  
-  
+
   # Downloadable csv of selected dataset for the desired time period ----
   output$downloadData <- downloadHandler(
     filename = function() {

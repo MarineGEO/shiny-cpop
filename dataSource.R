@@ -45,9 +45,9 @@ waterlevel.labels <- c("Air.Temperature"="Air Temperature (°C)",
 
 # R dataframe of sensors to include in the app. Must be called sensors.
 sensors <- tribble(
-  ~site, ~sensorName, ~type, ~urlpath, ~ignore, ~na, ~units,
-  "SERC", "SERC-WaterQuality", "waterquality", "https://dl.dropboxusercontent.com/s/n8sagrl8iwdmktm/2017_Water_Quality_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Bat"),c("", "NA"), waterquality.labels,
-  "SERC", "SERC-MET", "met", "https://dl.dropboxusercontent.com/s/rnkq0i0r7uxc5l5/2017_MET_RAW_SERC.csv?dl=0", c("Timestamp", "Site"),c("", "NA", "-Invalid-"), met.labels,
-  "SERC", "SERC-WaterLevel", "waterlevel", "https://dl.dropboxusercontent.com/s/byukiwxjtxkw0nm/2017_Water_Level_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Status"),c("", "NA"), waterlevel.labels,
-  "SERC2", "SERC-MET-RAW", "waterlevel", "https://raw.githubusercontent.com/MarineGEO/cpop-example-datasets/master/2017_MET_RAW_SERC.csv", c("Timestamp", "Site", "Status"),"-Invalid-", met.labels
+  ~site, ~sensorName, ~type, ~urlpath, ~ignore, ~na, ~units, ~coordinates, 
+  "SERC", "SERC-WaterQuality", "waterquality", "https://dl.dropboxusercontent.com/s/n8sagrl8iwdmktm/2017_Water_Quality_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Bat"),c("", "NA"), waterquality.labels, c(38.886179, -76.541424),
+  "SERC", "SERC-MET", "met", "https://dl.dropboxusercontent.com/s/rnkq0i0r7uxc5l5/2017_MET_RAW_SERC.csv?dl=0", c("Timestamp", "Site"),c("", "NA", "-Invalid-"), met.labels, c(38.886179, -76.541424),
+  "SERC", "SERC-WaterLevel", "waterlevel", "https://dl.dropboxusercontent.com/s/byukiwxjtxkw0nm/2017_Water_Level_RAW_SERC.csv?dl=0", c("Timestamp", "Site", "Status"),c("", "NA"), waterlevel.labels, c(38.886179, -76.541424),
+  "SERC2", "SERC-MET-RAW", "waterlevel", "https://raw.githubusercontent.com/MarineGEO/cpop-example-datasets/master/2017_MET_RAW_SERC.csv", c("Timestamp", "Site", "Status"),"-Invalid-", met.labels, c(9.355578, -82.278060)
 )
