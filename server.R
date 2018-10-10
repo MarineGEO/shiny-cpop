@@ -7,6 +7,7 @@ library(magrittr)
 library(dplyr)
 library(tidyr)
 library(leaflet)
+library(scales)
 
 # Source the sensor data list and the functions
 source("functions.R", local=TRUE)
@@ -128,6 +129,7 @@ function(input, output) {
   
   # render text with the time span for the data in the summary file
   output$timeSpan <- renderUI({
+    print(TimePeriodMinMax())
     lower <- format(TimePeriodMinMax()[1], "%Y%m%d%H%M")
     upper <- format(TimePeriodMinMax()[2], "%Y%m%d%H%M")
     str1 <- paste( "<h4>", "Date Range:", TimePeriodMinMax()[1], "-", TimePeriodMinMax()[2], "</h4>")
@@ -142,7 +144,7 @@ function(input, output) {
       ggplot(aes_string(x="Timestamp", y=input$parameter, colour=input$parameter))+
       geom_point(aes_string(x="Timestamp", y=input$parameter))+
       ylab(getLabel(input$parameter, sensorAttributeLookup(input$sensor, units)))+
-      scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
+      #scale_colour_gradientn(colours = palette(c("black","dark blue","blue", "royalblue2", "skyblue3")))+
       scale_x_datetime(date_labels = "%Y-%m-%d\n%H:%M")+
       theme_bw() +
       theme(panel.border = element_blank(),
